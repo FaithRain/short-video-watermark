@@ -87,28 +87,43 @@ object LocalParser {
 
     private suspend fun douyin(context: Context, link: String): AnalyseData {
         val id = withContext(Dispatchers.IO) { resolveId(link) }
-            ?: throw IllegalStateException("无法从链接提取作品 ID")
-        val raw = WebScraper.evaluate(
-            context,
-            "https://m.douyin.com/share/video/$id",
-            "window._ROUTER_DATA ? JSON.stringify(window._ROUTER_DATA) : null"
-        ) ?: throw IllegalStateException("页面加载超时，请检查网络后重试")
-        val root = json(decode(raw))
-        val item = findDouyinItem(root)
-            ?: throw IllegalStateException("页面中没有视频数据，作品可能已删除或需要登录")
-        val video = obj(item, "video")
+        val expr = "window._ROUTER_DATA ? JSON.stringify(window._ROUTER_DATA) : null"
+        // 视频、图文（slides/note）使用不同的分享页，逐个尝试；短链本身也能直达
+        val candidates = buildList {
+            add(link)
+            if (id != null) {
+                add("https://m.douyin.com/share/video/$id")
+                add("https://m.douyin.com/share/note/$id")
+                add("https://m.douyin.com/share/slides/$id")
+            }
+        }
+        var item: com.google.gson.JsonObject? = null
+        for (url in candidates) {
+            val raw = runCatching {
+                WebScraper.evaluate(context, url, expr, timeoutMs = 25_000)
+            }.getOrNull() ?: continue
+            item = runCatching { findDouyinItem(json(decode(raw))) }.getOrNull()
+            if (item != null) break
+        }
+        val found = item
+            ?: throw IllegalStateException("页面中没有作品数据，作品可能已删除或需要登录")
+        val video = obj(found, "video")
         val play = firstUrl(obj(video, "play_addr"))
             ?.replace("playwm", "play")
             ?.replace("ratio=720p", "ratio=1080p")
         val cover = firstUrl(obj(video, "cover")) ?: firstUrl(obj(video, "origin_cover"))
         val music = firstUrl(obj(obj(item, "music"), "play_url"))
-        val pics = arr(item, "images")?.mapNotNull { el ->
-            if (el.isJsonObject) firstUrl(el.asJsonObject) else null
+        val imageArr = arr(found, "images")
+            ?: arr(obj(found, "image_post_info"), "images")
+        val pics = imageArr?.mapNotNull { el ->
+            if (!el.isJsonObject) return@mapNotNull null
+            val o = el.asJsonObject
+            firstUrl(o) ?: firstUrl(obj(o, "display_image")) ?: firstUrl(obj(o, "origin_image"))
         }.orEmpty()
         return AnalyseData(
             playAddr = play ?: pics.firstOrNull(),
             cover = cover ?: pics.firstOrNull(),
-            desc = str(item, "desc").orEmpty(),
+            desc = str(found, "desc").orEmpty(),
             type = if (pics.isNotEmpty()) 2 else 1,
             pics = pics,
             music = music,
