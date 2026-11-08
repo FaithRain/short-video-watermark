@@ -135,8 +135,8 @@ object LocalParser {
 
     private suspend fun kuaishou(context: Context, link: String): AnalyseData {
         val pageUrl = withContext(Dispatchers.IO) { follow(link) } ?: link
-        val expr = "(()=>{try{return window.__APOLLO_STATE__?JSON.stringify(window.__APOLLO_STATE__):null}catch(e){return null}})()"
-        val raw = WebScraper.evaluate(context, pageUrl, expr, ready = { it != null && it != "null" })
+        val expr = "(()=>{try{if(window.__APOLLO_STATE__)return JSON.stringify(window.__APOLLO_STATE__);if(window.INIT_STATE)return JSON.stringify(window.INIT_STATE);return null}catch(e){return null}})()"
+        val raw = WebScraper.evaluate(context, pageUrl, expr, timeoutMs = 30_000, ready = { it != null && it != "null" && it.contains("mainMvUrls") })
         val state = raw?.let { runCatching { json(decode(it)) }.getOrNull() }
         var play: String? = null
         var cover: String? = null
@@ -150,8 +150,14 @@ object LocalParser {
                         play = str(mv.get(0).asJsonObject, "url")
                     }
                 }
-                if (cover == null) cover = str(o, "coverUrl") ?: str(o, "cover")
-                if (caption == null) caption = str(o, "caption") ?: str(o, "title")
+                if (cover == null) {
+                    cover = str(o, "coverUrl") ?: str(o, "cover")
+                    if (cover == null) {
+                        val cvs = arr(o, "coverUrls")
+                        if (cvs != null && cvs.size() > 0 && cvs.get(0).isJsonObject) cover = str(cvs.get(0).asJsonObject, "url")
+                    }
+                }
+                if (caption == null) caption = str(o, "caption")
             }
         }
         if (play.isNullOrBlank() || play == "null") {
@@ -175,7 +181,7 @@ object LocalParser {
     private suspend fun xiaohongshu(context: Context, link: String): AnalyseData {
         val pageUrl = withContext(Dispatchers.IO) { follow(link) } ?: link
         val expr = "(()=>{try{return window.__INITIAL_STATE__?JSON.stringify(window.__INITIAL_STATE__):null}catch(e){return null}})()"
-        val raw = WebScraper.evaluate(context, pageUrl, expr, ready = { it != null && it != "null" })
+        val raw = WebScraper.evaluate(context, pageUrl, expr, timeoutMs = 30_000, ready = { it != null && it != "null" && (it.contains("noteDetailMap") || it.contains("noteData")) })
             ?: throw IllegalStateException("页面加载超时，请检查网络后重试")
         val root = runCatching { json(decode(raw)) }.getOrNull()
             ?: throw IllegalStateException("小红书页面数据解析失败")
@@ -183,20 +189,33 @@ object LocalParser {
             ?: throw IllegalStateException("页面中没有笔记数据，可能需要登录或作品已删除")
         val video = obj(note, "video")
         var play: String? = null
-        val media = obj(video, "media")
-        val stream = obj(media, "stream")
-        for (codec in listOf("h264", "h265", "av1")) {
-            val list = arr(stream, codec) ?: continue
-            if (list.size() > 0 && list.get(0).isJsonObject) {
-                play = str(list.get(0).asJsonObject, "masterUrl")
-                    ?: str(list.get(0).asJsonObject, "backupUrls")
-                if (!play.isNullOrBlank()) break
+        // 新版：video.mediaV2 是 JSON 字符串，里面的 stream.h264[].masterUrl
+        val mediaV2 = str(video, "mediaV2")
+        if (!mediaV2.isNullOrBlank()) {
+            play = deepFind(mediaV2, "masterUrl")
+                ?: Regex("\"masterUrl\"\\s*:\\s*\"(.*?)\"")
+                    .find(mediaV2)?.groupValues?.get(1)
+        }
+        if (play.isNullOrBlank()) {
+            val media = obj(video, "media")
+            val stream = obj(media, "stream")
+            for (codec in listOf("h264", "h265", "av1")) {
+                val list = arr(stream, codec) ?: continue
+                if (list.size() > 0 && list.get(0).isJsonObject) {
+                    play = str(list.get(0).asJsonObject, "masterUrl")
+                        ?: str(list.get(0).asJsonObject, "backupUrls")
+                    if (!play.isNullOrBlank()) break
+                }
             }
         }
         val images = arr(note, "imageList")?.mapNotNull { el ->
             if (el.isJsonObject) str(el.asJsonObject, "urlDefault") ?: str(el.asJsonObject, "url") else null
         }.orEmpty()
-        val title = str(note, "title") ?: str(note, "desc")
+        var title = str(note, "title") ?: str(note, "desc")
+        if (title.isNullOrBlank()) {
+            val nick = str(obj(note, "user"), "nickName")
+            title = if (nick.isNullOrBlank()) "小红书笔记" else "${nick}的小红书笔记"
+        }
         val cover = images.firstOrNull()
         return AnalyseData(
             playAddr = play ?: cover,
@@ -211,12 +230,35 @@ object LocalParser {
 
     private fun findXhsNote(root: JsonObject): JsonObject? {
         val note = obj(root, "note")
-        val map = obj(note, "noteDetailMap") ?: return null
-        for (key in map.keySet()) {
-            val entry = obj(map, key) ?: continue
-            obj(entry, "note")?.let { return it }
+        val map = obj(note, "noteDetailMap")
+        if (map != null) {
+            for (key in map.keySet()) {
+                val entry = obj(map, key) ?: continue
+                obj(entry, "note")?.let { return it }
+            }
+        }
+        // 新版：__INITIAL_STATE__.noteData.data.noteData
+        obj(root, "noteData")?.let { nd ->
+            obj(nd, "data")?.let { data ->
+                obj(data, "noteData")?.let { return it }
+            }
         }
         return null
+    }
+
+    private fun deepFind(jsonText: String, key: String): String? =
+        runCatching { deepFind(json(jsonText), key) }.getOrNull()
+
+    private fun deepFind(el: JsonElement?, key: String): String? = when {
+        el == null || el.isJsonNull -> null
+        el.isJsonObject -> {
+            val o = el.asJsonObject
+            val direct = o.get(key)
+            if (direct != null && direct.isJsonPrimitive) direct.asString
+            else o.entrySet().asSequence().mapNotNull { deepFind(it.value, key) }.firstOrNull()
+        }
+        el.isJsonArray -> el.asJsonArray.asSequence().mapNotNull { deepFind(it, key) }.firstOrNull()
+        else -> null
     }
 
     // ---------------- B 站 ----------------
