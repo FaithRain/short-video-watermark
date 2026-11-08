@@ -59,3 +59,7 @@ docs/DESIGN.md               # 设计系统
 - 抖音解析依赖 WebView 加载分享页，首次约 3–8 秒；页面改版可能导致失效。
 - 快手 / 小红书逻辑已实现，尚未用真实分享链接大规模验证。
 - 仅支持 Android 8.0+（minSdk 26）。
+
+## 本地模拟器
+
+`tools/start-emulator.ps1` 可一键启动本地 AVD（需一次 UAC），细节与抖音/模拟器限制见 `tools/README.md`。
