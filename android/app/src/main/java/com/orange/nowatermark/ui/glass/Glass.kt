@@ -1,5 +1,6 @@
 package com.orange.nowatermark.ui.glass
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -24,10 +25,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -38,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import kotlin.math.hypot
 
 /** 雾面渐变底 + 缓慢漂浮的低饱和光斑。 */
 @Composable
@@ -178,6 +183,7 @@ fun GlassPrimaryButton(
             ),
         contentAlignment = Alignment.Center
     ) {
+        Box(Modifier.matchParentSize().centerPressRipple(interaction))
         androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
             if (loading) {
                 CircularProgressIndicator(
@@ -191,6 +197,36 @@ fun GlassPrimaryButton(
                 text,
                 color = Color.White,
                 style = MaterialTheme.typography.titleSmall
+            )
+        }
+    }
+}
+
+
+/** 按下时从中心扩散的白色涟漪，用于按钮/卡片。 */
+@Composable
+fun Modifier.centerPressRipple(
+    interaction: MutableInteractionSource,
+    color: Color = Color.White
+): Modifier {
+    val pressed by interaction.collectIsPressedAsState()
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(pressed) {
+        if (pressed) {
+            progress.snapTo(0f)
+            progress.animateTo(1f, tween(520, easing = LinearEasing))
+        } else {
+            progress.animateTo(0f, tween(200))
+        }
+    }
+    return drawWithContent {
+        drawContent()
+        if (progress.value > 0f) {
+            val maxR = hypot(size.width, size.height) / 2f
+            drawCircle(
+                color = color.copy(alpha = 0.30f * (1f - progress.value)),
+                radius = maxR * progress.value,
+                center = Offset(size.width / 2f, size.height / 2f)
             )
         }
     }

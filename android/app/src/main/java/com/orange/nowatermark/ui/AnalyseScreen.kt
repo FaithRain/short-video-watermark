@@ -106,7 +106,7 @@ fun AnalyseScreen(onBack: () -> Unit) {
                     onValueChange = { link = it },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("作品链接") },
-                    placeholder = { Text("粘贴抖音 / 快手 / 小红书 / B站链接") },
+                    placeholder = { Text("粘贴作品链接") },
                     trailingIcon = {
                         if (link.isNotEmpty()) {
                             IconButton(onClick = { link = "" }) {

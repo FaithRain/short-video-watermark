@@ -84,7 +84,7 @@ fun ProfileScreen(onNavigate: (Screen) -> Unit) {
                             )
                             Spacer(Modifier.height(3.dp))
                             Text(
-                                "v1.0.0 · 完全本地解析",
+                                "v1.0.0",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF5B6472)
                             )
@@ -114,13 +114,13 @@ fun ProfileScreen(onNavigate: (Screen) -> Unit) {
                 GlassCard(modifier = Modifier.fillMaxWidth(), padding = PaddingValues(18.dp)) {
                     Text("偏好设置", style = MaterialTheme.typography.titleSmall, color = Color(0xFF0E1116))
                     Spacer(Modifier.height(12.dp))
-                    SettingRow("解析成功后自动下载", "节省一步操作", autoDownload) {
+                    SettingRow("解析成功后自动下载", autoDownload) {
                         autoDownload = it
                         AppState.autoDownload = it
                         DataManager.saveSettings(autoDownload, autoClipboard)
                     }
                     Spacer(Modifier.height(10.dp))
-                    SettingRow("自动识别剪贴板链接", "打开页面自动粘贴", autoClipboard) {
+                    SettingRow("自动识别剪贴板链接", autoClipboard) {
                         autoClipboard = it
                         AppState.autoClipboard = it
                         DataManager.saveSettings(autoDownload, autoClipboard)
@@ -128,14 +128,6 @@ fun ProfileScreen(onNavigate: (Screen) -> Unit) {
                 }
             }
 
-            item {
-                Text(
-                    "所有解析都在本机完成，不上传链接、不收集个人信息。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF5B6472),
-                    modifier = Modifier.padding(horizontal = 6.dp)
-                )
-            }
         }
     }
 }
@@ -161,13 +153,9 @@ private fun MenuRow(text: String, icon: ImageVector, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SettingRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun SettingRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = Color(0xFF0E1116))
-            Spacer(Modifier.height(2.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color(0xFF5B6472))
-        }
+        Text(title, style = MaterialTheme.typography.bodyLarge, color = Color(0xFF0E1116), modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
             onCheckedChange = onChange,

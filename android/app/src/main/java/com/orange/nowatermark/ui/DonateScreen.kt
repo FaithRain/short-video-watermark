@@ -74,12 +74,6 @@ fun DonateScreen(onBack: () -> Unit) {
                 }
                 Text("赞赏作者", style = MaterialTheme.typography.titleLarge, color = Color(0xFF0E1116))
             }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "如果这个工具帮到了你，可以请作者喝杯咖啡。",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF5B6472)
-            )
             Spacer(Modifier.height(20.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -93,12 +87,6 @@ fun DonateScreen(onBack: () -> Unit) {
                     if (tab == 0) "支付宝收款码" else "微信收款码",
                     style = MaterialTheme.typography.titleSmall,
                     color = Color(0xFF0E1116)
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "长按识别，或点按保存到相册后扫码",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF5B6472)
                 )
                 Spacer(Modifier.height(16.dp))
 
@@ -138,24 +126,8 @@ fun DonateScreen(onBack: () -> Unit) {
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    "赞赏完全自愿，不影响任何功能。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF5B6472)
-                )
             }
 
-            Spacer(Modifier.height(18.dp))
-            GlassCard(modifier = Modifier.fillMaxWidth(), padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
-                Text("谢谢你的支持", style = MaterialTheme.typography.titleSmall, color = Color(0xFF0E1116))
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    "每一份心意都会变成下一版优化的动力。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF5B6472)
-                )
-            }
             Spacer(Modifier.height(30.dp))
         }
     }

@@ -23,12 +23,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ContentCut
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.GraphicEq
-import androidx.compose.material.icons.outlined.LibraryMusic
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.rounded.AudioFile
+import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Equalizer
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.MusicOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -54,6 +55,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.orange.nowatermark.Screen
 import com.orange.nowatermark.ui.glass.AuroraBackground
 import com.orange.nowatermark.ui.glass.GlassCard
+import com.orange.nowatermark.ui.glass.centerPressRipple
 import com.orange.nowatermark.ui.glass.glass
 
 @Composable
@@ -68,46 +70,30 @@ fun HomeScreen(onNavigate: (Screen) -> Unit) {
         ) {
             Spacer(Modifier.height(34.dp))
             Text("短视频去水印", style = MaterialTheme.typography.headlineLarge, color = Color(0xFF0E1116))
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "抖音 · 快手 · 小红书 · B站",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF5B6472)
-            )
-
-            Spacer(Modifier.height(22.dp))
-            HeroGlassCard()
-
             Spacer(Modifier.height(26.dp))
-            Text(
-                "核心服务",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color(0xFF0E1116)
-            )
-            Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FeatureTile("一键去水印", "粘贴链接解析", Icons.Outlined.ContentCut, Color(0xFFEAF2FF), Modifier.weight(1f)) {
+                FeatureTile("一键去水印", Icons.Rounded.AutoFixHigh, Color(0xFFEAF2FF), Modifier.weight(1f)) {
                     onNavigate(Screen.ANALYSE)
                 }
-                FeatureTile("批量解析", "多链接一起下", Icons.Outlined.Download, Color(0xFFE9F7F3), Modifier.weight(1f)) {
+                FeatureTile("批量解析", Icons.Rounded.Download, Color(0xFFE9F7F3), Modifier.weight(1f)) {
                     onNavigate(Screen.BATCH)
                 }
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FeatureTile("去除背景音乐", "无损去掉声音", Icons.Outlined.LibraryMusic, Color(0xFFF4EEFF), Modifier.weight(1f)) {
+                FeatureTile("去除背景音乐", Icons.Rounded.MusicOff, Color(0xFFF4EEFF), Modifier.weight(1f)) {
                     onNavigate(Screen.REMOVE_MUSIC)
                 }
-                FeatureTile("操作教程", "新手必看", Icons.Outlined.MenuBook, Color(0xFFEDF8EC), Modifier.weight(1f)) {
+                FeatureTile("操作教程", Icons.Rounded.MenuBook, Color(0xFFEDF8EC), Modifier.weight(1f)) {
                     onNavigate(Screen.TUTORIAL)
                 }
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FeatureTile("提取音频", "视频转 MP3", Icons.Outlined.MusicNote, Color(0xFFFFF6DF), Modifier.weight(1f)) {
+                FeatureTile("提取音频", Icons.Rounded.AudioFile, Color(0xFFFFF6DF), Modifier.weight(1f)) {
                     onNavigate(Screen.EXTRACT_AUDIO)
                 }
-                FeatureTile("音频转换", "转 M4A/AAC", Icons.Outlined.GraphicEq, Color(0xFFEAF0FF), Modifier.weight(1f)) {
+                FeatureTile("音频转换", Icons.Rounded.Equalizer, Color(0xFFEAF0FF), Modifier.weight(1f)) {
                     onNavigate(Screen.AUDIO_CONVERT)
                 }
             }
@@ -117,42 +103,8 @@ fun HomeScreen(onNavigate: (Screen) -> Unit) {
 }
 
 @Composable
-private fun HeroGlassCard() {
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        tint = Color.White.copy(alpha = 0.48f),
-        padding = PaddingValues(22.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .background(
-                    Brush.linearGradient(listOf(Color(0xFF6FB6FF), Color(0xFF0A6CFF))),
-                    RoundedCornerShape(14.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Outlined.ContentCut, contentDescription = null, tint = Color.White)
-        }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "免登录 · 免费 · 无水印",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color(0xFF0E1116)
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "解析全部在手机内完成，链接不上传，粘贴就能用。",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF5B6472)
-        )
-    }
-}
-
-@Composable
 private fun FeatureTile(
     title: String,
-    subtitle: String,
     icon: ImageVector,
     iconBg: Color,
     modifier: Modifier = Modifier,
@@ -160,26 +112,33 @@ private fun FeatureTile(
 ) {
     val interaction = MutableInteractionSource()
     val pressed by interaction.collectIsPressedAsState()
-    GlassCard(
-        modifier = modifier
-            .scale(if (pressed) 0.97f else 1f)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-        tint = Color.White.copy(alpha = 0.50f),
-        elevation = 12.dp,
-        padding = PaddingValues(16.dp)
+    val shape = RoundedCornerShape(24.dp)
+    Box(
+        modifier
+            .scale(if (pressed) 0.95f else 1f)
+            .clip(shape)
+            .centerPressRipple(interaction, Color(0xFF0A6CFF))
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(iconBg, RoundedCornerShape(13.dp)),
-            contentAlignment = Alignment.Center
+        GlassCard(
+            modifier = Modifier.fillMaxWidth(),
+            tint = Color.White.copy(alpha = 0.50f),
+            elevation = 12.dp,
+            padding = PaddingValues(vertical = 20.dp, horizontal = 10.dp)
         ) {
-            Icon(icon, contentDescription = null, tint = Color(0xFF243244), modifier = Modifier.size(20.dp))
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .background(iconBg, RoundedCornerShape(15.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = Color(0xFF243244), modifier = Modifier.size(22.dp))
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(title, style = MaterialTheme.typography.titleSmall, color = Color(0xFF0E1116))
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        Text(title, style = MaterialTheme.typography.titleSmall, color = Color(0xFF0E1116))
-        Spacer(Modifier.height(4.dp))
-        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color(0xFF5B6472))
     }
 }
 
