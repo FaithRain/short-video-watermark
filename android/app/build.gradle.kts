@@ -13,8 +13,8 @@ android {
         applicationId = "com.orange.nowatermark"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1000
-        versionName = "1.0.0"
+        versionCode = 1001
+        versionName = "1.0.1"
 
         ndk {
             // 只为真机（arm64）与本机模拟器（x86_64）打包，去掉 armeabi-v7a/x86。
