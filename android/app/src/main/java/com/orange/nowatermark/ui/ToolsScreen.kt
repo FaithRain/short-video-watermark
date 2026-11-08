@@ -61,7 +61,7 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ToolScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+internal fun ToolScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
     AuroraBackground {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             TopAppBar(

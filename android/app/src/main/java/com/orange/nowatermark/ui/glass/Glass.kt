@@ -28,12 +28,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.composed
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -142,7 +148,7 @@ fun GlassCard(
         Column(modifier = Modifier.padding(padding)) { content() }
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .matchParentSize()
                 .background(
                     Brush.verticalGradient(
                         listOf(Color.White.copy(alpha = 0.30f), Color.Transparent, Color.White.copy(alpha = 0.06f))
@@ -152,7 +158,7 @@ fun GlassCard(
     }
 }
 
-/** 主按钮：蓝色玻璃，按下缩放。 */
+/** 主按钮：白色液态玻璃，按下有体积收缩与手指落点涟漪。 */
 @Composable
 fun GlassPrimaryButton(
     text: String,
@@ -164,17 +170,36 @@ fun GlassPrimaryButton(
     val interaction = MutableInteractionSource()
     val pressed by interaction.collectIsPressedAsState()
     val shape = RoundedCornerShape(18.dp)
+    val ink = Color(0xFF0B1220)
     Box(
         modifier = modifier
             .height(54.dp)
+            .shadow(
+                elevation = if (pressed) 6.dp else 16.dp,
+                shape = shape,
+                ambientColor = Color(0x2233507A),
+                spotColor = Color(0x3333507A)
+            )
             .clip(shape)
             .background(
-                Brush.horizontalGradient(
-                    listOf(Color(0xFF2E8BFF), Color(0xFF0A6CFF))
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = if (pressed) 0.74f else 0.82f),
+                        Color.White.copy(alpha = if (pressed) 0.42f else 0.52f)
+                    )
                 )
             )
-            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(0.6f), Color.White.copy(0.1f))), shape)
-            .shadow(if (pressed) 6.dp else 18.dp, shape, spotColor = Color(0x550A6CFF))
+            .border(
+                1.2.dp,
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 1f),
+                        Color.White.copy(alpha = 0.50f),
+                        Color(0xFF8FA9C9).copy(alpha = 0.50f)
+                    )
+                ),
+                shape
+            )
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -183,51 +208,84 @@ fun GlassPrimaryButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Box(Modifier.matchParentSize().centerPressRipple(interaction))
+        // 顶部高光
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.55f), Color.Transparent, Color.Transparent),
+                        startY = 0f,
+                        endY = 54f * 2f
+                    )
+                )
+        )
+        Box(
+            Modifier
+                .matchParentSize()
+                .pressRipple(interaction, color = Color(0xFF0A6CFF), maxAlpha = 0.14f)
+        )
         androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
             if (loading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
-                    color = Color.White
+                    color = Color(0xFF0A6CFF)
                 )
                 Spacer(Modifier.size(8.dp))
             }
             Text(
                 text,
-                color = Color.White,
+                color = ink,
                 style = MaterialTheme.typography.titleSmall
             )
         }
     }
 }
 
-
-/** 按下时从中心扩散的白色涟漪，用于按钮/卡片。 */
+/** 按下时从手指落点扩散的涟漪；半径覆盖到最远角。 */
 @Composable
-fun Modifier.centerPressRipple(
+fun Modifier.pressRipple(
     interaction: MutableInteractionSource,
-    color: Color = Color.White
-): Modifier {
-    val pressed by interaction.collectIsPressedAsState()
+    color: Color = Color.White,
+    maxAlpha: Float = 0.30f
+): Modifier = composed {
+    var origin by remember { mutableStateOf(Offset.Unspecified) }
     val progress = remember { Animatable(0f) }
+    val pressed by interaction.collectIsPressedAsState()
     LaunchedEffect(pressed) {
         if (pressed) {
             progress.snapTo(0f)
-            progress.animateTo(1f, tween(520, easing = LinearEasing))
+            progress.animateTo(1f, tween(560, easing = LinearEasing))
         } else {
-            progress.animateTo(0f, tween(200))
+            progress.animateTo(0f, tween(220))
         }
     }
-    return drawWithContent {
-        drawContent()
-        if (progress.value > 0f) {
-            val maxR = hypot(size.width, size.height) / 2f
-            drawCircle(
-                color = color.copy(alpha = 0.30f * (1f - progress.value)),
-                radius = maxR * progress.value,
-                center = Offset(size.width / 2f, size.height / 2f)
-            )
+    this
+        .pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull { it.pressed }
+                    if (change != null) origin = change.position
+                }
+            }
         }
-    }
+        .drawWithContent {
+            drawContent()
+            if (progress.value > 0f) {
+                val o = if (origin.isSpecified) origin else Offset(size.width / 2f, size.height / 2f)
+                val maxR = listOf(
+                    Offset(0f, 0f),
+                    Offset(size.width, 0f),
+                    Offset(0f, size.height),
+                    Offset(size.width, size.height)
+                ).maxOf { (it - o).getDistance() }
+                drawCircle(
+                    color = color.copy(alpha = maxAlpha * (1f - progress.value)),
+                    radius = maxR * progress.value,
+                    center = o
+                )
+            }
+        }
 }

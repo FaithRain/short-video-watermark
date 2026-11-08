@@ -40,6 +40,8 @@ import com.orange.nowatermark.ui.BatchScreen
 import com.orange.nowatermark.ui.CropScreen
 import com.orange.nowatermark.ui.DonateScreen
 import com.orange.nowatermark.ui.ExtractAudioScreen
+import com.orange.nowatermark.ui.FormatConvertScreen
+import com.orange.nowatermark.ui.ConvertMode
 import com.orange.nowatermark.ui.HomeScreen
 import com.orange.nowatermark.ui.PrivacyDialog
 import com.orange.nowatermark.ui.PrivacyScreen
@@ -52,7 +54,7 @@ import com.orange.nowatermark.ui.theme.AppTheme
 
 enum class Screen {
     HOME, ANALYSE, BATCH, REMOVE_MUSIC, WATERMARK, CROP, EXTRACT_AUDIO, AUDIO_CONVERT,
-    TUTORIAL, PRIVACY, PROFILE, DONATE
+    FORMAT_CONVERT, TUTORIAL, PRIVACY, PROFILE, DONATE
 }
 
 class MainActivity : ComponentActivity() {
@@ -68,6 +70,7 @@ class MainActivity : ComponentActivity() {
 private fun AppRoot() {
     val context = LocalContext.current
     var screen by remember { mutableStateOf(Screen.HOME) }
+    var convertMode by remember { mutableStateOf(ConvertMode.VIDEO_TO_MP3) }
     var privacyAgreed by remember { mutableStateOf(DataManager.isPrivacyAgreed()) }
     val showNav = screen == Screen.HOME || screen == Screen.PROFILE
 
@@ -78,13 +81,17 @@ private fun AppRoot() {
     Box(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize().padding(bottom = if (showNav) 118.dp else 0.dp)) {
             when (screen) {
-                Screen.HOME -> HomeScreen(onNavigate = { screen = it })
+                Screen.HOME -> HomeScreen(
+                    onNavigate = { screen = it },
+                    onConvert = { mode -> convertMode = mode; screen = Screen.FORMAT_CONVERT }
+                )
                 Screen.ANALYSE -> AnalyseScreen(onBack = { screen = Screen.HOME })
                 Screen.BATCH -> BatchScreen(onBack = { screen = Screen.HOME })
                 Screen.REMOVE_MUSIC -> RemoveMusicScreen(onBack = { screen = Screen.HOME })
                 Screen.WATERMARK -> WatermarkScreen(onBack = { screen = Screen.HOME })
                 Screen.CROP -> CropScreen(onBack = { screen = Screen.HOME })
                 Screen.EXTRACT_AUDIO -> ExtractAudioScreen(onBack = { screen = Screen.HOME })
+                Screen.FORMAT_CONVERT -> FormatConvertScreen(convertMode) { screen = Screen.HOME }
                 Screen.AUDIO_CONVERT -> AudioConvertScreen(onBack = { screen = Screen.HOME })
                 Screen.TUTORIAL -> TutorialScreen(onBack = { screen = Screen.HOME })
                 Screen.PRIVACY -> PrivacyScreen(onBack = { screen = Screen.PROFILE })
