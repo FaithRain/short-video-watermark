@@ -63,3 +63,14 @@ docs/DESIGN.md               # 设计系统
 ## 本地模拟器
 
 `tools/start-emulator.ps1` 可一键启动本地 AVD（需一次 UAC），细节与抖音/模拟器限制见 `tools/README.md`。
+
+## 体积对比（1.0.0）
+
+| 构建 | 大小 | 说明 |
+| --- | --- | --- |
+| debug | 144,337,234 B（约 137.6 MiB） | 4 ABI、未压缩 dex、未 minify |
+| release | 66,212,874 B（约 63.1 MiB） | 2 ABI（arm64-v8a / x86_64）、R8 + shrinkResources |
+
+- dex 合计从约 59 MB 降到 3.4 MB；APK 内只剩 ffmpeg 的 arm64-v8a（26.4 MB）与 x86_64（34.3 MB）两套 so。
+- release 关闭 lintVital（离线环境缺少 lint-gradle）；签名沿用调试 keystore。
+- 已删除/收缩：armeabi-v7a 与 x86 两套 native 库、未使用的多语言资源、R8 裁掉的未被引用类与日志调用。

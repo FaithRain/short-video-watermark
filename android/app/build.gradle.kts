@@ -15,6 +15,12 @@ android {
         targetSdk = 35
         versionCode = 1000
         versionName = "1.0.0"
+
+        ndk {
+            // 只为真机（arm64）与本机模拟器（x86_64）打包，去掉 armeabi-v7a/x86。
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
+        resourceConfigurations += listOf("zh")
     }
 
 
@@ -30,7 +36,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -43,6 +55,11 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    lint {
+        // 离线环境没有 lint-gradle 依赖，release 不做 lintVital 检查。
+        checkReleaseBuilds = false
+        abortOnError = false
     }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
