@@ -19,7 +19,7 @@ ShortVideo Cleaner · 一个完全在手机本地运行的短视频去水印工�
 
 | 首页 | 解析 | 我的 |
 | --- | --- | --- |
-| ![](docs/screens/home.png) | ![](docs/screens/parse-bilibili.png) | ![](docs/screens/profile.png) |
+| ![](docs/screens/home.png) | ![](docs/screens/parse.png) | ![](docs/screens/convert.png) |
 
 ## 构建
 

@@ -8,7 +8,9 @@ import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -175,6 +179,7 @@ fun AnalyseScreen(onBack: () -> Unit) {
 @Composable
 private fun ResultCard(item: AnalyseData, onDownload: (String, String) -> Unit) {
     var tab by remember { mutableStateOf(0) }
+    var selectedPics by remember(item) { mutableStateOf(setOf<Int>()) }
     val context = LocalContext.current
     val referer = item.referer
     val play = item.playAddr.orEmpty()
@@ -228,16 +233,70 @@ private fun ResultCard(item: AnalyseData, onDownload: (String, String) -> Unit) 
         }
 
         if (pics.isNotEmpty()) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(pics) { url ->
-                    coil.compose.AsyncImage(
-                        model = url,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(96.dp)
-                            .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                    )
+            val allSelected = selectedPics.size == pics.size
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                pics.chunked(3).forEachIndexed { rowIndex, row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        row.forEachIndexed { col, url ->
+                            val index = rowIndex * 3 + col
+                            val checked = index in selectedPics
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.45f))
+                                    .then(
+                                        if (checked) Modifier.border(
+                                            2.dp, Color(0xFF0A6CFF), RoundedCornerShape(12.dp)
+                                        ) else Modifier
+                                    )
+                                    .clickableNoRipple {
+                                        selectedPics =
+                                            if (checked) selectedPics - index else selectedPics + index
+                                    }
+                            ) {
+                                coil.compose.AsyncImage(
+                                    model = url,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                                if (checked) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                            .background(Color.White.copy(alpha = 0.9f), RoundedCornerShape(50))
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.CheckCircle,
+                                            contentDescription = null,
+                                            tint = Color(0xFF0A6CFF),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GlassPill(if (allSelected) "取消全选" else "全选") {
+                        selectedPics = if (allSelected) emptySet() else pics.indices.toSet()
+                    }
+                    if (selectedPics.isNotEmpty()) {
+                        Text(
+                            "已选 ${selectedPics.size} / ${pics.size}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF5B6472),
+                            modifier = Modifier.align(Alignment.CenterVertically)
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -276,12 +335,20 @@ private fun ResultCard(item: AnalyseData, onDownload: (String, String) -> Unit) 
                 cm.setPrimaryClip(ClipData.newPlainText("链接", play))
                 Toast.makeText(context, "链接已复制", Toast.LENGTH_SHORT).show()
             }
-            GlassPill(if (item.isVideo) "保存视频" else "保存图片", primary = true) {
+            GlassPill(
+                when {
+                    item.isVideo -> "保存视频"
+                    selectedPics.isEmpty() -> "保存全部图片"
+                    else -> "保存所选 ${selectedPics.size}"
+                },
+                primary = true
+            ) {
                 if (item.isVideo) {
                     onDownload(play, "video_${System.currentTimeMillis()}.mp4")
                 } else {
-                    pics.forEachIndexed { i, url ->
-                        onDownload(url, "image_${System.currentTimeMillis()}_$i.jpg")
+                    val targets = if (selectedPics.isEmpty()) pics.indices.toList() else selectedPics.toList()
+                    targets.forEach { i ->
+                        onDownload(pics[i], "image_${System.currentTimeMillis()}_$i.jpg")
                     }
                 }
             }
