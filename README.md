@@ -1,76 +1,53 @@
 # 短视频去水印
 
-纯本地解析的 Android 去水印客户端：粘贴分享链接，直接在手机内解析出无水印视频/图集，**链接不上传、无需登录、无自建服务端**。
+ShortVideo Cleaner · 一个完全在手机本地运行的短视频去水印工具。
 
-当前版本 **1.0.0**（versionCode 1000）。
+粘贴作品链接就能解析抖音、快手、小红书、B 站的视频与图文；不登录、不上传链接、不经过任何服务端。
 
-## 功能
+## 特性
 
-- **一键去水印**：抖音 / 快手 / 小红书 / B 站，支持视频与图文
-- **批量解析**：多行链接逐条解析、勾选下载
-- **去除背景音乐**：FFmpegKit `-an -vcodec copy` 无损静音
-- **提取音频**：视频转 MP3（`libmp3lame -q:a 2`）
-- **音频转换**：转 M4A/AAC
-- **本地水印擦除 / 视频裁剪**：框选 delogo / 首尾裁剪
-- **赞赏作者**：支付宝 / 微信收款码（把图片放到 `app/src/main/assets/donate_alipay.png` 与 `donate_wechat.png` 即可）
+- 本地解析：链接与解析结果只在设备内处理，不会离开手机
+- 抖音 / 快手 / 小红书 / B 站
+- 视频无水印直链、图文多图下载
+- 图文可逐张勾选，只保存想要的那几张
+- 视频裁剪、去除背景音乐、提取音频
+- 格式转换：视频 → MP3 / GIF，音频 → M4A / WAV
+- 批量解析：一次粘贴多条链接
+- 液态玻璃界面，浅色通透
 
-界面采用浅色「液态玻璃」风格（Aurora 背景 + 半透明玻璃卡 + 悬浮胶囊导航）。
+## 截图
 
-## 解析原理
-
-| 平台 | 方式 |
-| --- | --- |
-| 抖音 | App 内隐藏 WebView 打开分享页，读取 `window._ROUTER_DATA` → `videoInfoRes`，`playwm`→`play` 去水印 |
-| 快手 | 短链展开 → `window.__APOLLO_STATE__` 递归取 `photoUrl` / `mainMvUrls`，og:video 兜底 |
-| 小红书 | `window.__INITIAL_STATE__.note.noteDetailMap` → 视频流 / 图集 |
-| B 站 | 开放 API：`x/web-interface/view` + `x/player/playurl`，播放/下载时带 `Referer: https://www.bilibili.com/` |
-
-> 抖音页面由真实 WebView 加载，ByteDance SecSDK 正常执行，因此无需服务端签名。
+| 首页 | 解析 | 我的 |
+| --- | --- | --- |
+| ![](docs/screens/home.png) | ![](docs/screens/parse-bilibili.png) | ![](docs/screens/profile.png) |
 
 ## 构建
 
-需要 JDK 17、Android SDK（platform 35 / build-tools 35.0.0）、Gradle 8.9。
+需要 JDK 17、Android SDK 35。
 
 ```bash
-export ANDROID_HOME=/path/to/android-sdk
 cd android
-gradle assembleDebug
-# 产物：app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleDebug
 ```
 
-依赖包含 `com.arthenica:ffmpeg-kit-full-gpl:6.0-2`（Maven Central 已下线，建议在 `settings.gradle.kts` 保留阿里云镜像）。
+产物：`android/app/build/outputs/apk/debug/app-debug.apk`
 
-## 目录
+## 结构
 
 ```
-android/app/src/main/java/com/orange/nowatermark/
-├── MainActivity.kt          # 导航与隐私弹窗
-├── data/                    # 模型与本地存储
-├── media/MediaTools.kt      # FFmpeg / 相册保存
-├── parser/LocalParser.kt    # 四平台解析
-├── parser/WebScraper.kt     # 隐藏 WebView 取值
-└── ui/                      # Compose 屏幕与玻璃组件
-docs/REPORT.md               # 原版 APK 逆向分析报告（5.7 / 6.1.0）
-docs/DESIGN.md               # 设计系统
+android/            Android 客户端（Kotlin + Jetpack Compose）
+  app/src/main/java/com/orange/nowatermark/
+    parser/         四平台解析与 WebView 抓取
+    ui/             页面与液态玻璃组件
+    media/          ffmpeg 封装与媒体处理
+docs/screens/       截图
 ```
 
-## 已知限制
+## 说明
 
-- 抖音解析依赖 WebView 加载分享页，首次约 3–8 秒；页面改版可能导致失效。
-- 快手 / 小红书逻辑已实现，尚未用真实分享链接大规模验证。
-- 仅支持 Android 8.0+（minSdk 26）。
+- 解析依赖各平台公开分享页，页面结构变化时可能需要更新适配
+- 请只下载自己有权保存的内容，尊重原作者与平台规则
 
-## 本地模拟器
+## 作者
 
-`tools/start-emulator.ps1` 可一键启动本地 AVD（需一次 UAC），细节与抖音/模拟器限制见 `tools/README.md`。
-
-## 体积对比（1.0.0）
-
-| 构建 | 大小 | 说明 |
-| --- | --- | --- |
-| debug | 144,337,234 B（约 137.6 MiB） | 4 ABI、未压缩 dex、未 minify |
-| release | 66,212,874 B（约 63.1 MiB） | 2 ABI（arm64-v8a / x86_64）、R8 + shrinkResources |
-
-- dex 合计从约 59 MB 降到 3.4 MB；APK 内只剩 ffmpeg 的 arm64-v8a（26.4 MB）与 x86_64（34.3 MB）两套 so。
-- release 关闭 lintVital（离线环境缺少 lint-gradle）；签名沿用调试 keystore。
-- 已删除/收缩：armeabi-v7a 与 x86 两套 native 库、未使用的多语言资源、R8 裁掉的未被引用类与日志调用。
+FaithRain
